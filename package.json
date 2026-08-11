@@ -13,6 +13,7 @@
     "check:login": "npm run build --silent && node dist/check-login.js",
     "credentials": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/save-credentials.ps1",
     "desktop": "npm run build --silent && electron .",
+    "dist:mac": "npm run build --silent && electron-builder --mac dmg zip --arm64",
     "dist:win": "npm run build --silent && electron-builder --win nsis portable --x64",
     "gui": "npm run build --silent && node dist/gui.js",
     "run": "npm run build --silent && node dist/run.js",
@@ -63,6 +64,21 @@
         {
           "target": "portable",
           "arch": ["x64"]
+        }
+      ]
+    },
+    "mac": {
+      "identity": null,
+      "category": "public.app-category.utilities",
+      "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64"]
         }
       ]
     },

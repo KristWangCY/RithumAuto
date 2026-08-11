@@ -26,6 +26,8 @@ const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 let mainWindow: BrowserWindow | null = null;
 let credentialsPath = "";
+let isQuitting = false;
+let dailyTimer: NodeJS.Timeout | undefined;
 
 if (!gotSingleInstanceLock) {
   app.quit();
@@ -79,6 +81,8 @@ async function startDesktopApp(): Promise<void> {
   ipcMain.handle("logs:list", readAllLogs);
 
   mainWindow = createMainWindow();
+  configureMacLoginLaunch();
+  scheduleMacDailyUpdate(runManager);
   runManager.subscribeRunStatus((status) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("run:status-changed", status);
@@ -86,8 +90,14 @@ async function startDesktopApp(): Promise<void> {
   });
 
   mainWindow.on("close", (event) => {
+    if (process.platform === "darwin" && !isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+      return;
+    }
     if (!runManager.isRunActive()) return;
     event.preventDefault();
+    isQuitting = false;
     void dialog.showMessageBox(mainWindow!, {
       type: "info",
       title: "任务仍在运行",
@@ -97,9 +107,15 @@ async function startDesktopApp(): Promise<void> {
       defaultId: 0,
     });
   });
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 
   await mainWindow.loadFile(resolve(app.getAppPath(), "desktop", "index.html"));
-  mainWindow.show();
+  const openedAtLogin =
+    process.platform === "darwin" &&
+    app.getLoginItemSettings().wasOpenedAsHidden;
+  if (!openedAtLogin) mainWindow.show();
 }
 
 function createMainWindow(): BrowserWindow {
@@ -132,7 +148,7 @@ async function hasDesktopCredentials(): Promise<boolean> {
 
 async function readDesktopCredentials(): Promise<RithumCredentials> {
   if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error("Windows 安全存储当前不可用。请登录 Windows 后重试。" );
+    throw new Error("系统安全存储当前不可用。请登录电脑后重试。" );
   }
 
   const record = JSON.parse(await readFile(credentialsPath, "utf8")) as {
@@ -157,7 +173,7 @@ async function saveDesktopCredentials(
   credentials: RithumCredentials,
 ): Promise<void> {
   if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error("Windows 安全存储当前不可用。请登录 Windows 后重试。" );
+    throw new Error("系统安全存储当前不可用。请登录电脑后重试。" );
   }
 
   const encrypted = safeStorage
@@ -187,6 +203,7 @@ function validateCredentials(
 
 async function migrateLegacyData(dataDir: string): Promise<void> {
   await migrateLegacyLogs(dataDir);
+  if (process.platform !== "win32") return;
   if (existsSync(credentialsPath)) return;
 
   const legacyPath = resolve(
@@ -224,6 +241,56 @@ async function migrateLegacyData(dataDir: string): Promise<void> {
   }
 }
 
+function configureMacLoginLaunch(): void {
+  if (
+    process.platform !== "darwin" ||
+    !app.isPackaged ||
+    process.argv.includes("--disable-auto-schedule")
+  ) {
+    return;
+  }
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    openAsHidden: true,
+  });
+}
+
+function scheduleMacDailyUpdate(
+  runManager: typeof import("../run-manager.js"),
+): void {
+  if (
+    process.platform !== "darwin" ||
+    process.argv.includes("--disable-auto-schedule")
+  ) {
+    return;
+  }
+
+  const scheduleNext = (): void => {
+    if (dailyTimer) clearTimeout(dailyTimer);
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(9, 30, 0, 0);
+    if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+
+    dailyTimer = setTimeout(() => {
+      void runScheduledUpdate(runManager).finally(scheduleNext);
+    }, next.getTime() - now.getTime());
+  };
+
+  scheduleNext();
+}
+
+async function runScheduledUpdate(
+  runManager: typeof import("../run-manager.js"),
+): Promise<void> {
+  if (runManager.isRunActive() || !(await hasDesktopCredentials())) return;
+  try {
+    runManager.startManagedInventoryUpdate();
+  } catch {
+    // The run manager exposes any operational failure to the desktop status.
+  }
+}
+
 async function migrateLegacyLogs(dataDir: string): Promise<void> {
   const legacyLogDir = resolve(process.cwd(), "logs");
   const desktopLogDir = resolve(dataDir, "logs");
@@ -249,6 +316,14 @@ function showFatalError(error: unknown): void {
   app.quit();
 }
 
+app.on("before-quit", () => {
+  isQuitting = true;
+});
+
+app.on("activate", () => {
+  mainWindow?.show();
+});
+
 app.on("window-all-closed", () => {
-  app.quit();
+  if (process.platform !== "darwin") app.quit();
 });

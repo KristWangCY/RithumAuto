@@ -115,3 +115,15 @@ npm run dist:win
 构建结果保存在 `release/`。安装版会创建桌面和开始菜单快捷方式；便携版可以直接双击运行。桌面软件仍只有 A（更新全部 Inventory）和 B（查看全部日志）两个主要功能，并会实时显示当前 SKU 和完成进度。
 
 软件数据保存在当前 Windows 用户的 RithumAuto 应用数据目录。首次缺少凭据时，点击 A 会要求输入账号和密码；凭据由 Electron `safeStorage` 调用 Windows DPAPI 加密，不会写入源码、日志或安装包。
+
+## macOS Apple Silicon（M1 / M2 / M3 / M4）
+
+在 macOS 构建环境中生成 arm64 DMG 和 ZIP：
+
+```bash
+npm run dist:mac
+```
+
+macOS 版本使用系统钥匙串加密凭据。安装后的应用会注册为登录时后台启动，并在应用运行期间按 Mac 的本地时间每天 09:30 自动执行全部 Inventory 的 Save Changes；关闭窗口只会隐藏应用，使用 `Command+Q` 才会完全退出并停止当天的后台调度。
+
+DMG 和 ZIP 必须在 macOS 上构建。仓库中的 `Build macOS Apple Silicon` GitHub Actions 工作流会使用 macOS arm64 runner 生成发布产物。
