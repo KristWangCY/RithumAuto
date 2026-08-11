@@ -1,0 +1,26 @@
+{
+  "name": "rithum-auto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Safe single-SKU Rithum/DSCO inventory updater",
+  "type": "module",
+  "scripts": {
+    "auth": "tsx src/auth.ts",
+    "check:login": "tsx src/check-login.ts",
+    "credentials": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/save-credentials.ps1",
+    "run": "tsx src/run.ts",
+    "run:all": "tsx src/run-all.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright": "^1.62.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
