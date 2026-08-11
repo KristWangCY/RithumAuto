@@ -24,7 +24,7 @@ const listeners = new Set<StatusListener>();
 
 let status: RunStatus = {
   state: "idle",
-  message: "尚未运行。每天 09:30 自动执行。",
+  message: "尚未运行。点击按钮 A 开始更新。",
   startedAt: null,
   finishedAt: null,
   logFile: null,
