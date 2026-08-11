@@ -1,7 +1,7 @@
 import type { Locator, Page } from "playwright";
 
 import { TIMEOUT_MS } from "./config.js";
-import { readEncryptedCredentials } from "./credentials.js";
+import { getRithumCredentials } from "./credentials.js";
 
 const INVENTORY_BUTTON = "Update Item Inventory";
 
@@ -13,7 +13,7 @@ export async function loginIfRequired(page: Page): Promise<void> {
 
   if (await waitVisible(updateButton, 5_000)) return;
 
-  const credentials = await readEncryptedCredentials();
+  const credentials = await getRithumCredentials();
   try {
     const email = page.getByRole("textbox", { name: "Email", exact: true });
     if (await waitVisible(email, TIMEOUT_MS)) {
@@ -49,4 +49,3 @@ async function waitVisible(locator: Locator, timeout: number): Promise<boolean> 
     .then(() => true)
     .catch(() => false);
 }
-

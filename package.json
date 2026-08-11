@@ -1,15 +1,22 @@
 {
   "name": "rithum-auto",
+  "productName": "RithumAuto",
   "version": "0.1.0",
   "private": true,
-  "description": "Safe single-SKU Rithum/DSCO inventory updater",
+  "description": "Windows desktop automation for Rithum inventory updates",
+  "author": "KristWangCY",
+  "main": "dist/desktop/main.js",
   "type": "module",
   "scripts": {
-    "auth": "tsx src/auth.ts",
-    "check:login": "tsx src/check-login.ts",
+    "auth": "npm run build --silent && node dist/auth.js",
+    "build": "tsc --outDir dist",
+    "check:login": "npm run build --silent && node dist/check-login.js",
     "credentials": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/save-credentials.ps1",
-    "run": "tsx src/run.ts",
-    "run:all": "tsx src/run-all.ts",
+    "desktop": "npm run build --silent && electron .",
+    "dist:win": "npm run build --silent && electron-builder --win nsis portable --x64",
+    "gui": "npm run build --silent && node dist/gui.js",
+    "run": "npm run build --silent && node dist/run.js",
+    "run:all": "npm run build --silent && node dist/run-all.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,10 +24,54 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
-    "tsx": "^4.23.12",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
     "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=22"
+  },
+  "build": {
+    "appId": "com.robotailpets.rithumauto",
+    "productName": "RithumAuto",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/playwright/**/*",
+      "node_modules/playwright-core/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "scripts/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "scripts"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RithumAuto"
+    }
   }
 }

@@ -82,3 +82,36 @@ npm run run:all -- --commit
 ```text
 时间 + 信息 + 操作
 ```
+
+## 极简 GUI
+
+确认 `.env` 中已经设置 `RITHUM_ALLOW_COMMIT=true`，然后运行：
+
+```powershell
+npm run gui
+```
+
+浏览器会打开 `http://127.0.0.1:3930`。GUI 只提供两个按钮：
+
+- **A · 全部 Save Changes**：自动登录当前账号，遍历全部 Inventory，并逐个执行 Save Changes。同一时间只允许一个批量任务运行。
+- **B · 查看所有日志**：读取并展示 `logs/` 中全部 `.log` 文件，包括历史记录；再次点击会刷新日志。
+
+GUI 仅监听本机地址，账号和密码不会发送到页面。关闭页面不会中断已经启动的批量任务；停止 GUI 请在终端按 `Ctrl+C`。
+
+## Windows 桌面软件
+
+开发模式启动独立桌面窗口：
+
+```powershell
+npm run desktop
+```
+
+生成 Windows x64 安装包和便携版 EXE：
+
+```powershell
+npm run dist:win
+```
+
+构建结果保存在 `release/`。安装版会创建桌面和开始菜单快捷方式；便携版可以直接双击运行。桌面软件仍只有 A（更新全部 Inventory）和 B（查看全部日志）两个主要功能，并会实时显示当前 SKU 和完成进度。
+
+软件数据保存在当前 Windows 用户的 RithumAuto 应用数据目录。首次缺少凭据时，点击 A 会要求输入账号和密码；凭据由 Electron `safeStorage` 调用 Windows DPAPI 加密，不会写入源码、日志或安装包。

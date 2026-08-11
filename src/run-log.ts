@@ -1,6 +1,8 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+import { LOG_DIR } from "./config.js";
+
 const LONDON_TIME = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/London",
   year: "numeric",
@@ -19,7 +21,7 @@ export interface RunLogger {
 
 export async function createRunLogger(): Promise<RunLogger> {
   const fileStamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const path = resolve("logs", `rithum-auto-${fileStamp}.log`);
+  const path = resolve(LOG_DIR, `rithum-auto-${fileStamp}.log`);
   await mkdir(dirname(path), { recursive: true });
 
   return {
@@ -36,4 +38,3 @@ export async function createRunLogger(): Promise<RunLogger> {
 function singleLine(value: string): string {
   return value.replace(/[\r\n]+/g, " ").trim();
 }
-

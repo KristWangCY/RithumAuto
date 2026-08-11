@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RithumAuto</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">ROBOTAIL PETS</p>
+        <h1>RithumAuto</h1>
+        <p class="subtitle">全部保存，或查看完整运行记录。</p>
+      </div>
+      <span class="local-badge">本机安全运行</span>
+    </header>
+
+    <section class="actions" aria-label="主要功能">
+      <button id="run" class="primary" type="button">
+        <span class="key">A</span>
+        <span>全部 Save Changes</span>
+      </button>
+      <button id="logs" class="secondary" type="button">
+        <span class="key">B</span>
+        <span>查看所有日志</span>
+      </button>
+    </section>
+
+    <section id="status-card" class="status-card" data-state="idle" aria-live="polite">
+      <div class="status-line">
+        <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+        <strong id="status">正在读取状态…</strong>
+      </div>
+      <div id="progress-wrap" class="progress-wrap" hidden>
+        <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+        <span id="progress-label"></span>
+      </div>
+    </section>
+
+    <section id="log-view" class="log-view" aria-label="历史日志" hidden></section>
+  </main>
+
+  <dialog id="credentials-dialog">
+    <form id="credentials-form">
+      <p class="eyebrow">首次使用</p>
+      <h2>安全保存 Rithum 账号</h2>
+      <p>凭据只会通过 Windows DPAPI 加密保存在这台电脑上。</p>
+      <label>登录邮箱<input id="username" type="email" autocomplete="username" required></label>
+      <label>登录密码<input id="password" type="password" autocomplete="current-password" required></label>
+      <p id="credentials-error" class="form-error" role="alert"></p>
+      <button class="save-credentials" type="submit">安全保存并执行 A</button>
+    </form>
+  </dialog>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

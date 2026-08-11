@@ -1,6 +1,7 @@
 node_modules/
+dist/
+release/
 .env
 .runtime/
 logs/
 test-results/
-
