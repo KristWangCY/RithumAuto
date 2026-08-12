@@ -1,129 +1,250 @@
 # RithumAuto
 
-第一阶段目标：在 Rithum / DSCO 中对一个明确的 SKU 完成安全的端到端库存更新。
+RithumAuto is a desktop and command-line automation tool for Rithum / DSCO Inventory. It reads the Inventory list and processes each SKU with the following workflow:
 
-当前脚本执行以下流程：
+1. Select the checkbox for exactly one SKU.
+2. Click **Update Item Inventory**.
+3. Leave the existing inventory fields unchanged.
+4. Click **Save Changes**.
+5. Wait for Rithum's success notification.
+6. Write a timestamped success or failure entry to the run log.
 
-1. 使用独立的本地 Chrome 配置打开 `https://app.dsco.io/inventory`；
-2. 在 `Search...` 中精确搜索一个 SKU；
-3. 二次核对商品行里的 SKU；
-4. 只勾选这一行；
-5. 打开 `Update Item Inventory`；
-6. 保持现有库存字段不变；
-7. 仅在显式授权时点击 `Save Changes`；
-8. 等待一条新的成功通知，确认 Rithum 已验证并开始处理。
+The desktop application intentionally has only two main actions:
 
-## 安装
+- **A · Save Changes for all items** — processes every SKU and shows live progress.
+- **B · View all logs** — shows the current run and all historical logs.
 
-```powershell
-npm install
-Copy-Item .env.example .env
+## Supported desktop platforms
+
+- Windows 10/11 x64
+- macOS on Apple Silicon: M1, M2, M3, and M4
+
+Google Chrome must be installed. RithumAuto uses a separate Chrome profile so it does not modify the user's normal Chrome profile.
+
+## Downloading the macOS build
+
+Open the [macOS Apple Silicon build workflow](https://github.com/KristWangCY/RithumAuto/actions/workflows/build-macos.yml), select the latest successful run, and download the `RithumAuto-macOS-arm64` artifact.
+
+The downloaded artifact contains:
+
+- `RithumAuto-0.1.0-macOS-arm64.dmg`
+- `RithumAuto-0.1.0-macOS-arm64.zip`
+
+GitHub Actions artifacts are temporary and require a GitHub account to download. The current macOS build is unsigned and not notarized because the project does not have an Apple Developer signing certificate.
+
+## macOS quick start
+
+### 1. Install
+
+1. Download and unzip the latest `RithumAuto-macOS-arm64` artifact.
+2. Open the DMG.
+3. Drag **RithumAuto** into **Applications**.
+4. If an older copy exists, quit it with `Command+Q` and choose **Replace**.
+
+### 2. Allow the unsigned application
+
+macOS may report that the application is damaged even when the download is intact. This is Gatekeeper blocking an unsigned and unnotarized application.
+
+Only if the application came from this repository, open Terminal and run:
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/RithumAuto.app"
+open "/Applications/RithumAuto.app"
 ```
 
-编辑 `.env`，填写测试 SKU。`.env` 和浏览器登录会话均已被 Git 忽略。
+The password prompt does not display characters while typing. This is normal.
 
-## 第一次登录
+### 3. First run
 
-```powershell
-npm run auth
+1. Open RithumAuto.
+2. Click **A · Save Changes for all items**.
+3. Enter the Rithum email address and password when prompted.
+4. Wait for the Inventory list and per-SKU progress to appear.
+5. Keep the application running until the final result is displayed.
+
+Credentials are encrypted through Electron `safeStorage`, backed by the macOS Keychain. Passwords are not written to source code or logs.
+
+## Manual login, MFA, or CAPTCHA on macOS
+
+Rithum may occasionally require MFA, a CAPTCHA, or another interactive sign-in step. The automatic run cannot complete those challenges in a hidden browser.
+
+If the application reports **Automatic login did not complete**, run this command in Terminal:
+
+```bash
+open -na "Google Chrome" --args --user-data-dir="$HOME/Library/Application Support/RithumAuto/.runtime/rithum-profile" "https://app.dsco.io/inventory"
 ```
 
-Chrome 打开后，手动输入账号、密码和 MFA。程序检测到 Inventory 页面后会自动保存本地会话并退出。
+Then:
 
-## 加密保存自动登录凭据
+1. Complete the login, MFA, or CAPTCHA manually.
+2. Confirm that the Inventory page and **Update Item Inventory** button are visible.
+3. Quit that Chrome instance completely with `Command+Q` so the profile is unlocked.
+4. Return to RithumAuto and click button A again.
 
-凭据使用 Windows DPAPI 加密，只能由保存凭据的同一个 Windows 用户解密。密码不会写入 `.env`、任务参数或日志。
+Do not delete `.runtime/rithum-profile`; it stores the reusable Rithum browser session.
 
-```powershell
-npm run credentials -- -UserName YOUR-EMAIL
+If the saved email or password is wrong, make a recoverable backup of the encrypted credential record:
+
+```bash
+mv "$HOME/Library/Application Support/RithumAuto/credentials.secure.json" "$HOME/Desktop/RithumAuto-credentials-backup.json"
 ```
 
-按提示输入密码。可以用以下命令验证后台登录，不会更新 SKU：
+Click button A again and enter the correct credentials.
 
-```powershell
-npm run check:login
+## macOS daily 09:30 schedule
+
+The packaged macOS app registers itself as a login item and schedules an Inventory run for **09:30 in the Mac's local time zone**.
+
+For the run to start on time:
+
+- The Mac must be powered on, logged in, and awake.
+- RithumAuto must still be running.
+- Google Chrome and the network connection must be available.
+- The stored Rithum session must not require new MFA or a CAPTCHA.
+
+Closing the RithumAuto window only hides it, so the schedule remains active. `Command+Q` fully quits the app and stops its in-app schedule.
+
+Turning off the display is fine while the Mac remains awake. A sleeping Mac cannot run the task at exactly 09:30; the in-app timer may run only after the Mac wakes. On a MacBook, keep the power adapter connected, keep the lid open, and enable the macOS option that prevents automatic sleep on the power adapter while the display is off.
+
+For a temporary awake session that still allows the display to turn off, run:
+
+```bash
+caffeinate -i
 ```
 
-## 安全预演
+Keep that Terminal command running until the scheduled update is complete.
 
-```powershell
-npm run run -- --sku YOUR-SKU
-```
+## Windows desktop app
 
-预演会搜索、核对、勾选商品并打开更新表单，然后点击 `Cancel`，不会保存。
+The Windows app uses the same two-button interface and encrypts credentials with Windows DPAPI through Electron `safeStorage`.
 
-## 真实更新
+Windows updates are manual: click button A to start a run. The previous local/Codex 09:30 Windows schedule has been removed. There is no Windows background schedule in the current desktop build.
 
-先在 `.env` 中设置：
-
-```dotenv
-RITHUM_ALLOW_COMMIT=true
-```
-
-然后执行：
-
-```powershell
-npm run run -- --sku YOUR-SKU --commit
-```
-
-真实更新必须同时具备环境开关和 `--commit` 参数，避免误运行。失败截图保存在 `logs/`。
-
-## 逐个更新全部 SKU
-
-该命令会先读取 Inventory 当前全部结果，然后逐个执行“勾选白框 → Update Item Inventory → Save Changes”。每个 SKU 完成后立即写入日志；单个 SKU 失败时记录错误并继续。
-
-```powershell
-$env:RITHUM_ALLOW_COMMIT='true'
-npm run run:all -- --commit
-```
-
-日志保存在 `logs/rithum-auto-*.log`，每行格式为：
-
-```text
-时间 + 信息 + 操作
-```
-
-## 极简 GUI
-
-确认 `.env` 中已经设置 `RITHUM_ALLOW_COMMIT=true`，然后运行：
-
-```powershell
-npm run gui
-```
-
-浏览器会打开 `http://127.0.0.1:3930`。GUI 只提供两个按钮：
-
-- **A · 全部 Save Changes**：自动登录当前账号，遍历全部 Inventory，并逐个执行 Save Changes。同一时间只允许一个批量任务运行。
-- **B · 查看所有日志**：读取并展示 `logs/` 中全部 `.log` 文件，包括历史记录；再次点击会刷新日志。
-
-GUI 仅监听本机地址，账号和密码不会发送到页面。关闭页面不会中断已经启动的批量任务；停止 GUI 请在终端按 `Ctrl+C`。
-
-## Windows 桌面软件
-
-开发模式启动独立桌面窗口：
-
-```powershell
-npm run desktop
-```
-
-生成 Windows x64 安装包和便携版 EXE：
+Build the Windows x64 installer and portable executable with:
 
 ```powershell
 npm run dist:win
 ```
 
-构建结果保存在 `release/`。安装版会创建桌面和开始菜单快捷方式；便携版可以直接双击运行。桌面软件仍只有 A（更新全部 Inventory）和 B（查看全部日志）两个主要功能，并会实时显示当前 SKU 和完成进度。
+Output files are written to `release/`:
 
-软件数据保存在当前 Windows 用户的 RithumAuto 应用数据目录。首次缺少凭据时，点击 A 会要求输入账号和密码；凭据由 Electron `safeStorage` 调用 Windows DPAPI 加密，不会写入源码、日志或安装包。
+- `RithumAuto Setup 0.1.0.exe`
+- `RithumAuto 0.1.0.exe`
 
-## macOS Apple Silicon（M1 / M2 / M3 / M4）
+## Logs and troubleshooting
 
-在 macOS 构建环境中生成 arm64 DMG 和 ZIP：
+Every SKU writes a log entry in the following format:
+
+```text
+time + information + operation
+```
+
+Desktop log locations:
+
+- macOS: `~/Library/Application Support/RithumAuto/logs`
+- Windows: `%APPDATA%\RithumAuto\logs`
+
+Button B reads all `.log` files from the desktop log directory. A failed SKU is recorded and the batch continues with the next SKU. Failure screenshots are saved in the same log directory when possible.
+
+Common failures:
+
+| Message or symptom | Recommended action |
+| --- | --- |
+| Automatic login did not complete | Use the dedicated-profile manual login procedure above and complete MFA/CAPTCHA. |
+| A SKU link times out | Install the latest build, which clears the search field with `ControlOrMeta+A` and retries the lookup once. |
+| The app is reported as damaged | Remove the quarantine attribute only after verifying that the app came from this repository. |
+| The 09:30 run did not start | Confirm that the Mac was awake, RithumAuto was running, and the login session was still valid. |
+| Google Chrome cannot be launched | Install or update Google Chrome, open it once, then retry. |
+
+Rithum UI changes, network interruptions, session expiration, MFA, and CAPTCHA challenges can still interrupt automation. Review the latest log before retrying a failed run.
+
+## Development setup
+
+Requirements:
+
+- Node.js 22 or later
+- npm
+- Google Chrome
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+On PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Run the desktop app in development mode:
+
+```bash
+npm run desktop
+```
+
+Validate the project:
+
+```bash
+npm run typecheck
+npm run build
+npm audit --omit=dev
+```
+
+Build a native Apple Silicon DMG and ZIP on macOS:
 
 ```bash
 npm run dist:mac
 ```
 
-macOS 版本使用系统钥匙串加密凭据。安装后的应用会注册为登录时后台启动，并在应用运行期间按 Mac 的本地时间每天 09:30 自动执行全部 Inventory 的 Save Changes；关闭窗口只会隐藏应用，使用 `Command+Q` 才会完全退出并停止当天的后台调度。
+The `Build macOS Apple Silicon` GitHub Actions workflow performs the macOS build on a native ARM64 runner.
 
-DMG 和 ZIP 必须在 macOS 上构建。仓库中的 `Build macOS Apple Silicon` GitHub Actions 工作流会使用 macOS arm64 runner 生成发布产物。
+## Command-line workflow
+
+Open Chrome for an interactive login and save the dedicated local browser session:
+
+```bash
+npm run auth
+```
+
+Preview one SKU without saving:
+
+```bash
+npm run run -- --sku YOUR-SKU
+```
+
+To permit a real update, set this value in `.env`:
+
+```dotenv
+RITHUM_ALLOW_COMMIT=true
+```
+
+Update one SKU:
+
+```bash
+npm run run -- --sku YOUR-SKU --commit
+```
+
+Update every SKU:
+
+```bash
+npm run run:all -- --commit
+```
+
+A real update requires both `RITHUM_ALLOW_COMMIT=true` and the explicit `--commit` argument.
+
+## Security and repository hygiene
+
+- `.env`, encrypted credential records, browser profiles, logs, screenshots, and release binaries are excluded from Git.
+- Passwords must never be added to issues, pull requests, logs, screenshots, or source files.
+- macOS credentials use Keychain-backed encryption.
+- Windows credentials use DPAPI-backed encryption.
+- RithumAuto verifies the exact SKU row before selecting its checkbox.
+- A success is recorded only after Rithum returns the expected processing notification.
