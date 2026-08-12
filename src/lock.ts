@@ -1,7 +1,9 @@
 import { mkdir, open, rm, type FileHandle } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-const LOCK_PATH = resolve(".runtime/rithum-auto.lock");
+import { RUNTIME_DIR } from "./config.js";
+
+const LOCK_PATH = resolve(RUNTIME_DIR, "rithum-auto.lock");
 
 export async function acquireRunLock(): Promise<() => Promise<void>> {
   await mkdir(dirname(LOCK_PATH), { recursive: true });
@@ -27,4 +29,3 @@ export async function acquireRunLock(): Promise<() => Promise<void>> {
     await rm(LOCK_PATH, { force: true });
   };
 }
-

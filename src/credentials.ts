@@ -3,13 +3,29 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 
+import { RUNTIME_DIR } from "./config.js";
+
 const execFileAsync = promisify(execFile);
-const CREDENTIAL_PATH = resolve(".runtime/rithum-credentials.json");
+const CREDENTIAL_PATH = resolve(RUNTIME_DIR, "rithum-credentials.json");
 const READER_PATH = resolve("scripts/read-credentials.ps1");
 
 export interface RithumCredentials {
   username: string;
   password: string;
+}
+
+export type CredentialsProvider = () => Promise<RithumCredentials>;
+
+let credentialsProvider: CredentialsProvider | undefined;
+
+export function setCredentialsProvider(provider: CredentialsProvider): void {
+  credentialsProvider = provider;
+}
+
+export async function getRithumCredentials(): Promise<RithumCredentials> {
+  return credentialsProvider
+    ? credentialsProvider()
+    : readEncryptedCredentials();
 }
 
 export async function readEncryptedCredentials(): Promise<RithumCredentials> {
@@ -40,4 +56,3 @@ export async function readEncryptedCredentials(): Promise<RithumCredentials> {
   }
   return { username: parsed.username, password: parsed.password };
 }
-

@@ -56,11 +56,40 @@ export async function selectSingleSku(
   page: Page,
   sku: string,
 ): Promise<{ row: Locator; snapshot: ItemSnapshot }> {
+  let firstError: unknown;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await selectSingleSkuOnce(page, sku);
+    } catch (error) {
+      firstError ??= error;
+      if (attempt === 2) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`SKU ${sku} 两次定位均失败：${message}`, {
+          cause: firstError,
+        });
+      }
+
+      // The Inventory search component can retain stale text after navigation.
+      // Reload once before retrying so a transient render/search failure does
+      // not mark the SKU as failed immediately.
+      await openInventory(page);
+    }
+  }
+
+  throw new Error(`SKU ${sku} 定位失败。`, { cause: firstError });
+}
+
+async function selectSingleSkuOnce(
+  page: Page,
+  sku: string,
+): Promise<{ row: Locator; snapshot: ItemSnapshot }> {
   const search = page.getByPlaceholder("Search...", { exact: true });
   // ui-input-search is a DSCO custom element whose native input is encapsulated.
   // Clicking the host focuses the input; keyboard typing then reaches it.
   await search.click();
-  await page.keyboard.press("Control+A");
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.press("Backspace");
   await page.keyboard.type(sku);
   await page.waitForTimeout(800);
 

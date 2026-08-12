@@ -2,14 +2,20 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 
-if (existsSync(resolve(".env"))) {
-  loadEnvFile(resolve(".env"));
+export const DATA_DIR = resolve(process.env.RITHUM_DATA_DIR ?? ".");
+export const RUNTIME_DIR = resolve(DATA_DIR, ".runtime");
+export const LOG_DIR = resolve(DATA_DIR, "logs");
+
+const envPath = resolve(DATA_DIR, ".env");
+if (existsSync(envPath)) {
+  loadEnvFile(envPath);
 }
 
 export const INVENTORY_URL =
   process.env.RITHUM_INVENTORY_URL ?? "https://app.dsco.io/inventory";
 
 export const PROFILE_DIR = resolve(
+  DATA_DIR,
   process.env.RITHUM_PROFILE_DIR ?? ".runtime/rithum-profile",
 );
 
@@ -65,4 +71,3 @@ function readPositiveInteger(name: string, fallback: number): number {
   }
   return parsed;
 }
-
